@@ -1,19 +1,20 @@
 import torch
 import torch.nn as nn
+from config import *
 
 class ReviewAnalysisModel(nn.Module):
     def __init__(self, vocab_size, padding_idx):
         super(ReviewAnalysisModel, self).__init__()
         # 嵌入层
-        self.embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=128, padding_idx=padding_idx)
+        self.embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=EMBEDDING_DIM, padding_idx=padding_idx)
         # RNN层
         self.rnn = nn.RNN(
-            input_size=128,
-            hidden_size=256,
+            input_size=EMBEDDING_DIM,
+            hidden_size=HIDDEN_SIZE,
             batch_first=True,
         )
         # 全连接层
-        self.linear = nn.Linear(in_features=256, out_features=1)
+        self.linear = nn.Linear(in_features=HIDDEN_SIZE, out_features=1)
 
     # 前向传播
     def forward(self, x):
@@ -36,7 +37,7 @@ class ReviewAnalysisModel(nn.Module):
 if __name__ == "__main__":
     vocab_size = 10000
     # 定义数据
-    input = torch.randint(vocab_size, size=(64, 128))  # (batch_size, seq_length)
+    input = torch.randint(vocab_size, size=(BATCH_SIZE, SEQ_LEN))  # (batch_size, seq_length)
     # 创建模型
     model = ReviewAnalysisModel(vocab_size, padding_idx=0)
     # 前向传播

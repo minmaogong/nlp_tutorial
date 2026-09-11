@@ -1,6 +1,7 @@
 import torch
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
+from config import *
 
 # 自定义数据集类
 class ReviewAnalysisDataset(Dataset):
@@ -21,17 +22,17 @@ class ReviewAnalysisDataset(Dataset):
 # 获取DataLoader
 def get_dataloader(train=True):
     # 根据参数判断获取哪个数据集
-    file_path = '../data/processed/' + ('train.jsonl' if train else 'test.jsonl')
+    file_path = PROCESSED_DATA_DIR / (TRAIN_DATA_FILE if train else TEST_DATA_FILE)
     # 创建数据集
     dataset = ReviewAnalysisDataset(file_path)
     # 创建加载器
-    dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     return dataloader
 
 
 if __name__ == '__main__':
     # 测试数据集
-    train_dataset = ReviewAnalysisDataset('../data/processed/train.jsonl')
+    train_dataset = ReviewAnalysisDataset(PROCESSED_DATA_DIR/TRAIN_DATA_FILE)
     print(len(train_dataset))
     print(train_dataset[0])
 
