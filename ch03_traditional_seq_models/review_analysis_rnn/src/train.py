@@ -1,6 +1,9 @@
+import time
+
 import torch
 from torch import nn, optim
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 from config import *
 from dataset import get_dataloader
@@ -52,17 +55,23 @@ def train():
     # 6. 优化器
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
+    writer = SummaryWriter(log_dir=LOG_DIR/time.strftime("%Y%m%d-%H%M%S"))
+
     # 7. 开始训练
     min_loss = float('inf')
     for epoch in range(EPOCHS):
         this_loss = train_one_epoch(model, dataloader, loss_fn, optimizer, device)
         tqdm.write(f"Epoch [{epoch+1}/{EPOCHS}], Loss: {this_loss:.4f}")
 
+        writer.add_scalar('loss', this_loss, epoch+1)
+
         # 判断是否保存模型
         if this_loss < min_loss:
             min_loss = this_loss
             torch.save(model.state_dict(), MODEL_DIR/BEST_MODEL)
             tqdm.write("模型保存成功！")
+
+    writer.close()
 
 if __name__ == "__main__":
     train()
