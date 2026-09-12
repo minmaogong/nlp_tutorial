@@ -1,7 +1,10 @@
 # 核心逻辑：传入一批数据，前向传播得到预测概率
+import jieba
 import torch
 
 from model import ReviewAnalysisModel
+
+from config import *
 
 
 def predict_batch(model, inputs):
@@ -14,22 +17,47 @@ def predict_batch(model, inputs):
     return batch_proba.tolist()
 
 def predict(text):
-    pass
+    # 1. 准备工作，创建模型 model
+    # 1.1. 定义设备
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # 1.2 加载词表
+    with open(MODEL_DIR/VOCAB_FILE, 'r', encoding='utf-8') as f:
+        id2word = [line.strip() for line in f.readlines() ]
+
+    word2id = {word:id for id, word in enumerate(id2word)}
+    # 1.3.= 创建模型
+    model = ReviewAnalysisModel(len(id2word), padding_idx=word2id[PAD_TOKEN]).to(device)
+    model.load_state_dict(torch.load(MODEL_DIR/BEST_MODEL))
+
+    print("模型加载成功！")
+
+    # 2. 处理文本，得到输入 inputs
+    # 2.1 分词
+    tokens = jieba.lcut(text)
+    # 2.2 id化（编码）
+    ids = [ word2id.get(token, word2id[UNK_TOKEN]) for token in tokens ]
+    # 2.3 转换tensor， 形状(N=1, L)
+    input = torch.tensor([ids], dtype=torch.long).to(device)
+
+    # 3. 预测
+    proba = predict_batch(model, input)[0]
+    return proba
+
 
 if __name__ == "__main__":
-    vocab_size = 10000
-    input = torch.randint(vocab_size, size=(64, 128))
-    print(input)
-    # 模型
-    model = ReviewAnalysisModel(vocab_size, padding_idx=0)
+    # vocab_size = 10000
+    # input = torch.randint(vocab_size, size=(64, 128))
+    # print(input)
+    # # 模型
+    # model = ReviewAnalysisModel(vocab_size, padding_idx=0)
+    #
+    # # 预测
+    # result = predict_batch(model, input)
+    # print(result)
 
-    # 预测
-    result = predict_batch(model, input)
-    print(result)
-
-    # text = "东西很好"
-    # result_proba = predict(text)
-    # if result_proba > 0.5:
-    #     print(f"正向 置信度：{result_proba}")
-    # else:
-    #     print(f"负向 置信度：{1-result_proba}")
+    text = "东西很好"
+    result_proba = predict(text)
+    if result_proba > 0.5:
+        print(f"正向 置信度：{result_proba}")
+    else:
+        print(f"负向 置信度：{1-result_proba}")
