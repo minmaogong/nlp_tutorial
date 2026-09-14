@@ -8,6 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from config import *
 from dataset import get_dataloader
 from model import ReviewAnalysisModel
+from tokenizer import MyJiebaTokenizer
 
 # 训练一个轮次
 def train_one_epoch(model, dataloader, loss_fn, optimizer, device):
@@ -41,13 +42,15 @@ def train():
     dataloader = get_dataloader(train=True)
 
     # 3. 加载词表
-    with open(MODEL_DIR/VOCAB_FILE, 'r', encoding='utf-8') as f:
-        id2word = [ line.strip() for line in f.readlines() ]
+    # with open(MODEL_DIR/VOCAB_FILE, 'r', encoding='utf-8') as f:
+    #     id2word = [ line.strip() for line in f.readlines() ]
+    # 3. 创建分词器
+    tokenizer = MyJiebaTokenizer.create_tokenizer(MODEL_DIR/VOCAB_FILE)
 
-    word2id = { word:id for id, word in enumerate(id2word) }
+    # word2id = { word:id for id, word in enumerate(id2word) }
 
     # 4. 创建模型
-    model = ReviewAnalysisModel(vocab_size=len(id2word), padding_idx=word2id[PAD_TOKEN]).to(device)
+    model = ReviewAnalysisModel(vocab_size=tokenizer.vocab_size, padding_idx=tokenizer.pad_id).to(device)
 
     # 5. 损失函数
     loss_fn = nn.BCEWithLogitsLoss()

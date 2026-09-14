@@ -1,9 +1,8 @@
 import pandas as pd
-import jieba
 
 from sklearn.model_selection import train_test_split
-from tqdm import tqdm
 from config import *
+from tokenizer import MyJiebaTokenizer
 
 # 预处理函数
 def preprocess():
@@ -17,31 +16,40 @@ def preprocess():
     train_df, test_df = train_test_split(df, test_size=TEST_SIZE, random_state=42, stratify=df['label']) # stratify=df['label'] 表示按标签分层抽样，保证切分后的训练集和测试集中label的比例与原数据一致
 
     # 3. 构建词表
-    vocab_set = set()
-    for review in tqdm(train_df['review'].tolist(), desc='构建词表'):
-        vocab_set.update(jieba.lcut(review))
+    # vocab_set = set()
+    # for review in tqdm(train_df['review'].tolist(), desc='构建词表'):
+    #     vocab_set.update(jieba.lcut(review))
+    #
+    # # 增加特殊token
+    # id2word = [PAD_TOKEN, UNK_TOKEN] + list(vocab_set)
+    # word2id = { word:id for id, word in enumerate(id2word) }
+    #
+    # print("词表大小：", len(id2word))
+    #
+    # # 保存词表到文件
+    # with open(MODEL_DIR/VOCAB_FILE, 'w', encoding='utf-8') as f:
+    #     f.write( '\n'.join(id2word) )
+    #
+    # # 4. id化（编码）
+    # def encode(text):
+    #     # 分词
+    #     tokens = jieba.lcut(text)
+    #     # 按最大长度进行填充
+    #     if len(tokens) > SEQ_LEN:
+    #         tokens = tokens[:SEQ_LEN]
+    #     elif len(tokens) < SEQ_LEN:
+    #         tokens = tokens + [PAD_TOKEN] * (SEQ_LEN - len(tokens))
+    #     # 转成id列表返回
+    #     return [ word2id.get(token, word2id[UNK_TOKEN]) for token in tokens ]
 
-    # 增加特殊token
-    id2word = [PAD_TOKEN, UNK_TOKEN] + list(vocab_set)
-    word2id = { word:id for id, word in enumerate(id2word) }
+    # 3. 构建词表
+    MyJiebaTokenizer.build_vocab(train_df['review'].tolist(), MODEL_DIR/VOCAB_FILE)
 
-    print("词表大小：", len(id2word))
+    # 4. 创建分词器
+    tokenizer = MyJiebaTokenizer.create_tokenizer(MODEL_DIR/VOCAB_FILE)
 
-    # 保存词表到文件
-    with open(MODEL_DIR/VOCAB_FILE, 'w', encoding='utf-8') as f:
-        f.write( '\n'.join(id2word) )
-
-    # 4. id化（编码）
-    def encode(text):
-        # 分词
-        tokens = jieba.lcut(text)
-        # 按最大长度进行填充
-        if len(tokens) > SEQ_LEN:
-            tokens = tokens[:SEQ_LEN]
-        elif len(tokens) < SEQ_LEN:
-            tokens = tokens + [PAD_TOKEN] * (SEQ_LEN - len(tokens))
-        # 转成id列表返回
-        return [ word2id.get(token, word2id[UNK_TOKEN]) for token in tokens ]
+    # 5. id化（编码）
+    encode = lambda text: tokenizer.encode(text, seq_len=SEQ_LEN)
 
     train_df['review'] = train_df['review'].apply(encode)
     test_df['review'] = test_df['review'].apply(encode)
