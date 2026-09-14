@@ -16,21 +16,7 @@ def predict_batch(model, inputs):
     batch_proba = torch.sigmoid(outputs)
     return batch_proba.tolist()
 
-def predict(text):
-    # 1. 准备工作，创建模型 model
-    # 1.1. 定义设备
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # 1.2 加载词表
-    with open(MODEL_DIR/VOCAB_FILE, 'r', encoding='utf-8') as f:
-        id2word = [line.strip() for line in f.readlines() ]
-
-    word2id = {word:id for id, word in enumerate(id2word)}
-    # 1.3.= 创建模型
-    model = ReviewAnalysisModel(len(id2word), padding_idx=word2id[PAD_TOKEN]).to(device)
-    model.load_state_dict(torch.load(MODEL_DIR/BEST_MODEL))
-
-    print("模型加载成功！")
-
+def predict(text, model, word2id, device):
     # 2. 处理文本，得到输入 inputs
     # 2.1 分词
     tokens = jieba.lcut(text)
@@ -42,6 +28,41 @@ def predict(text):
     # 3. 预测
     proba = predict_batch(model, input)[0]
     return proba
+
+# 应用程序函数
+def run_predict():
+    # 1. 准备工作，创建模型 model
+    # 1.1. 定义设备
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # 1.2 加载词表
+    with open(MODEL_DIR/VOCAB_FILE, 'r', encoding='utf-8') as f:
+        id2word = [line.strip() for line in f.readlines()] #line.strip() 的作用是去掉每行字符串的首尾空格和换行符
+
+    word2id = { word:id for id, word in enumerate(id2word) }
+
+    # 1.3.= 创建模型
+    model = ReviewAnalysisModel(len(id2word), padding_idx=word2id[PAD_TOKEN]).to(device)
+    model.load_state_dict(torch.load(MODEL_DIR/BEST_MODEL)) # 加载训练好的模型参数
+
+    print("模型加载成功！")
+
+    # 2. 运行程序
+    print("欢迎使用文本情感分析模型！输入q或者quit退出...")
+    while True:
+        text = input("> ")
+
+        if text.lower() in ["q", "quit"]:
+            print("欢迎下次使用。")
+            break
+        if text.strip() == "":
+            print("请输入内容...")
+            continue
+
+        result_proba = predict(text, model, word2id, device)
+        if result_proba > 0.5:
+            print(f"正向 置信度：{result_proba}")
+        else:
+            print(f"负向 置信度：{1-result_proba}")
 
 
 if __name__ == "__main__":
@@ -55,9 +76,11 @@ if __name__ == "__main__":
     # result = predict_batch(model, input)
     # print(result)
 
-    text = "东西很好"
-    result_proba = predict(text)
-    if result_proba > 0.5:
-        print(f"正向 置信度：{result_proba}")
-    else:
-        print(f"负向 置信度：{1-result_proba}")
+    # text = "东西很好"
+    # result_proba = predict(text)
+    # if result_proba > 0.5:
+    #     print(f"正向 置信度：{result_proba}")
+    # else:
+    #     print(f"负向 置信度：{1-result_proba}")
+
+    run_predict()
