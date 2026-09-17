@@ -1,4 +1,5 @@
 /.idea
 /ch03_traditional_seq_models/review_analysis_rnn/src/__pycache__
+/ch03_traditional_seq_models/review_analysis_gru/src/__pycache__
 /ch02_text_rep/data/.accelerate/
 /ch02_text_rep/data/sgns.weibo.word.bz2
