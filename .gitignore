@@ -3,3 +3,4 @@
 /ch03_traditional_seq_models/review_analysis_gru/src/__pycache__
 /ch02_text_rep/data/.accelerate/
 /ch02_text_rep/data/sgns.weibo.word.bz2
+/ch04_seq2seq/translation_seq2seq/src/__pycache__
