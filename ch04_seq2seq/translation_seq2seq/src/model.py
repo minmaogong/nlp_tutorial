@@ -13,6 +13,7 @@ class TranslationEncoder(nn.Module):
             input_size=EMBEDDING_DIM,
             hidden_size=HIDDEN_SIZE,
             batch_first=True,
+            bidirectional=True,
         )
 
     # 前向传播
@@ -26,9 +27,11 @@ class TranslationEncoder(nn.Module):
         # last_hidden_state = output[:, -1, :]
         lengths = (x != self.embedding.padding_idx).sum(dim=-1) # 计算每条数据的真实长度
         indices = torch.arange(output.shape[0])
-        last_hidden_state = output[indices, lengths-1] # 列表索引，结果形状(N, hidden_size)
+        # last_hidden_state = output[indices, lengths-1] # 列表索引，结果形状(N, hidden_size)
+        last_hidden_state = output[indices, lengths-1, :HIDDEN_SIZE]
+        first_hidden_state = output[indices, 0, HIDDEN_SIZE:]
 
-        return last_hidden_state #
+        return torch.cat((last_hidden_state, first_hidden_state), dim=-1)
 
 class TranslationDecoder(nn.Module):
     def __init__(self, vocab_size, padding_idx):
@@ -38,11 +41,11 @@ class TranslationDecoder(nn.Module):
         # GRU层
         self.gru = nn.GRU(
             input_size=EMBEDDING_DIM,
-            hidden_size=HIDDEN_SIZE,
+            hidden_size=2*HIDDEN_SIZE,
             batch_first=True,
         )
         # 全连接层
-        self.linear = nn.Linear(in_features=HIDDEN_SIZE, out_features=vocab_size)
+        self.linear = nn.Linear(in_features=2*HIDDEN_SIZE, out_features=vocab_size)
 
     # 前向传播
     def forward(self, x, context_vector):
