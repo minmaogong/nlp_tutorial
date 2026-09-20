@@ -21,7 +21,7 @@ def predict_batch(model, inputs, tokenizer, device):
         generated_ids = [] # 只保存生成真实译文的对应id，有N个元素的列表，每个元素都是id的列表，表示一句译文
         is_finished = torch.full(size=[batch_size], fill_value=False).to(device) # 记录每条数据是否已生成天结束
         for i in range(SEQ_LEN):
-            # 3.1 解码器前行传播
+            # 3.1 解码器前行传播，得到输出 (N, L=1, vocab_size)
             decoder_output, decoder_hidden = model.decoder(decoder_input, decoder_hidden)
             # 3.2 贪心解码，得到形状(N, 1)
             next_token_ids = decoder_output.argmax(dim=-1)
@@ -49,45 +49,40 @@ def predict_batch(model, inputs, tokenizer, device):
 
     return generated_list
 
-def predict(text, model, tokenizer, device):
+def predict(text, model, src_tokenizer, tgt_tokenizer, device):
     # 1. 处理文本，得到输入 inputs
-    # 1.1 分词
-    # tokens = jieba.lcut(text)
-    # 1.2 id化（编码）
-    # ids = [ word2id.get(token, word2id[UNK_TOKEN]) for token in tokens ]
     # 1.1 分词并id化（编码）
-    ids = tokenizer.encode(text, seq_len=SEQ_LEN)
+    ids = src_tokenizer.encode(text, mark=False)
     # 1.3 转换tensor， 形状(N=1, L)
     input = torch.tensor([ids], dtype=torch.long).to(device)
 
     # 2. 预测
-    proba = predict_batch(model, input)[0]
-    return proba
+    generated_list = predict_batch(model, input, tgt_tokenizer, device)
+
+    # 3. 解码得到目标语言文本
+    result = tgt_tokenizer.decode(generated_list[0])
+    return result
 
 # 应用程序函数
 def run_predict():
     # 1. 准备工作，创建模型 model
     # 1.1. 定义设备
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # 1.2 加载词表
-    # with open(MODEL_DIR/VOCAB_FILE, 'r', encoding='utf-8') as f:
-    #     id2word = [line.strip() for line in f.readlines()] #line.strip() 的作用是去掉每行字符串的首尾空格和换行符
-    #
-    # word2id = { word:id for id, word in enumerate(id2word) }
 
     # 1.2 创建分词器
-    tokenizer = MyJiebaTokenizer.create_tokenizer(MODEL_DIR/VOCAB_FILE)
+    zh_tokenizer = ChineseTokenizer.create_tokenizer(MODEL_DIR/ZH_VOCAB_FILE)
+    en_tokenizer = EnglishTokenizer.create_tokenizer(MODEL_DIR/EN_VOCAB_FILE)
 
     # 1.3.= 创建模型
-    model = ReviewAnalysisModel(tokenizer.vocab_size, padding_idx=tokenizer.pad_id).to(device)
+    model = TranslationSeq2SeqModel(src_vocab_size=zh_tokenizer.vocab_size, tgt_vocab_size=en_tokenizer.vocab_size, src_padding_idx=zh_tokenizer.pad_id, tgt_padding_idx=en_tokenizer.pad_id).to(device)
     model.load_state_dict(torch.load(MODEL_DIR/BEST_MODEL)) # 加载训练好的模型参数
 
     print("模型加载成功！")
 
     # 2. 运行程序
-    print("欢迎使用文本情感分析模型！输入q或者quit退出...")
+    print("欢迎使用中英翻译模型！输入q或者quit退出...")
     while True:
-        text = input("> ")
+        text = input("中文：")
 
         if text.lower() in ["q", "quit"]:
             print("欢迎下次使用。")
@@ -96,11 +91,10 @@ def run_predict():
             print("请输入内容...")
             continue
 
-        result_proba = predict(text, model, tokenizer, device)
-        if result_proba > 0.5:
-            print(f"正向 置信度：{result_proba}")
-        else:
-            print(f"负向 置信度：{1-result_proba}")
+        result = predict(text, model, zh_tokenizer, en_tokenizer, device)
+        print("英文：", result)
+
+
 
 
 if __name__ == "__main__":
