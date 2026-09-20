@@ -51,7 +51,7 @@ class TranslationDecoder(nn.Module):
         # GRU前向传播，得到output形状(N, L, hidden_size)
         output, hn = self.gru(embedding, context_vector) # context_vector 作为gru的初始隐藏状态传入
 
-        # Linear整合特征输出，形状(N, vocab_size)
+        # Linear整合特征输出，形状(N, L, vocab_size)
         output = self.linear(output)
 
         return output, hn
