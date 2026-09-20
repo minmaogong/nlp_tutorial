@@ -65,7 +65,8 @@ class BaseTokenizer:
 class ChineseTokenizer(BaseTokenizer):
     @classmethod
     def tokenize(cls, text):
-        return jieba.lcut(text)
+        # return jieba.lcut(text)
+        return list(text) # 字符级分词
 
 from nltk import TreebankWordTokenizer, TreebankWordDetokenizer
 class EnglishTokenizer(BaseTokenizer):
