@@ -26,7 +26,7 @@ class TranslationEncoder(nn.Module):
         # last_hidden_state = output[:, -1, :]
         lengths = (x != self.embedding.padding_idx).sum(dim=-1) # 计算每条数据的真实长度
         indices = torch.arange(output.shape[0])
-        last_hidden_state = output[indices, lengths-1] # 列表索引
+        last_hidden_state = output[indices, lengths-1] # 列表索引，结果形状(N, hidden_size)
 
         return last_hidden_state #
 
