@@ -49,7 +49,7 @@ class TranslationModel(nn.Module):
         # 线性层
         self.linear = nn.Linear(in_features=DIM_MODEL, out_features=tgt_vocab_size)
 
-    # 前向传播，传入N条src序列，src形状(N, S), N条tgt序列，tgt形状(N, T) 每条序列都是一个id列表
+    # 前向传播，传入N条长度为S的序列，src形状(N, S), N条成都为T的序列，tgt形状(N, T) 每条序列都是一个id列表
     def forward(self, src, tgt, src_key_padding_mask, tgt_mask):
         # 编码
         memory = self.encode(src, src_key_padding_mask)
@@ -85,16 +85,16 @@ if __name__ == "__main__":
     src_vocab_size = 1000
     tgt_vocab_size = 1200
     # 定义数据
-    input = torch.randint(src_vocab_size, size=(BATCH_SIZE, 20))  # (batch_size, seq_length)
-    input_dec = torch.randint(tgt_vocab_size, size=(BATCH_SIZE, 16))  # (batch_size, seq_length)
+    src = torch.randint(src_vocab_size, size=(64, 20))  # (batch_size, seq_length) 64条数据，每条数据20个词，每个词由一个id表示
+    tgt = torch.randint(tgt_vocab_size, size=(64, 16))  # (batch_size, seq_length) 64条数据，每条数据16个词，每个词由一个id表示
     # 创建模型
-    model = TranslationSeq2SeqModel(src_vocab_size, tgt_vocab_size, src_padding_idx=0, tgt_padding_idx=0)
+    model = TranslationModel(src_vocab_size, tgt_vocab_size, src_padding_idx=0, tgt_padding_idx=0)
+
+    # 准备掩码
+    src_key_padding_mask = (src == model.src_embedding.padding_idx) # 生成src_key_padding_mask，形状(N, S) True表示该位置是padding (src == model.src_embedding.padding_idx) 两个矩阵对应位置比较，比较结果作为mask，True表示该位置是padding 模型在前向传播时会忽略这些位置
+    tgt_mask = model.transformer.generate_square_subsequent_mask(tgt.shape[1]) # 生成上三角矩阵，形状(T, T) tgt_mask的作用是为了在解码器中防止模型在生成下一个词时看到未来的词，不想被提前看到的位置会标记-∞，需要关注前文位置会标记0，最终经过softmax后，-∞位置的概率为0，模型不会关注这些位置
     # 前向传播
-    # 编码
-    encoder_output, context_vector = model.encoder(input)
-    print("context_vector shape: ", context_vector.shape)
-    print("encoder_output shape: ", encoder_output.shape)
-    # 解码
-    output, hn = model.decoder(input_dec, context_vector.unsqueeze(0), encoder_output)
-    print("output shape: ", output.shape)
-    print("hn shape: ", hn.shape)
+    output = model(src, tgt, src_key_padding_mask, tgt_mask) # src: 源序列(N, L) tgt: 目标序列(N, T) src_key_padding_mask: 源序列的padding掩码(N, S) tgt_mask: 目标序列的掩码(T, T)
+    print(output.shape) # (N, T, tgt_vocab_size)
+    print(output)
+
