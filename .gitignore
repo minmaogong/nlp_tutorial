@@ -5,3 +5,4 @@
 /ch02_text_rep/data/sgns.weibo.word.bz2
 /ch04_seq2seq/translation_seq2seq/src/__pycache__
 /ch05_attention/translation_attention/src/__pycache__
+/ch06_transformer/translation_transformer/src/__pycache__
