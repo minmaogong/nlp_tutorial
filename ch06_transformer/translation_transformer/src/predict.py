@@ -1,6 +1,6 @@
 import torch
 
-from model import TranslationSeq2SeqModel
+from model import TranslationModel
 
 from config import *
 from tokenizer import ChineseTokenizer, EnglishTokenizer
@@ -9,24 +9,26 @@ from tokenizer import ChineseTokenizer, EnglishTokenizer
 def predict_batch(model, inputs, tokenizer, device):
     model.eval()
     with torch.no_grad():
-        # 编码, 得到上下文向量，形状(N, hidden_size)
-        encoder_outputs, context_vectors = model.encoder(inputs)
+        # 编码, 得到上下文向量，形状(N, d_model)
+        src_key_padding_mask = (inputs == model.src_embedding.padding_idx)
+        memory = model.encode(inputs, src_key_padding_mask)
         # 解码
-        # 1. 获取初始隐藏状态，形状(1, N, hidden_size)
-        decoder_hidden = context_vectors.unsqueeze(0)
-        # 2. 定义第一个时间步输入(<SOS>)，形状(N, L=1)
+        # 1. 定义第一个位置输入(<SOS>)，形状(N, L=1)，N条数据，每条数据一个<sos>词id，所以是(N, 1)
         batch_size = inputs.shape[0]
-        decoder_input = torch.full(size=[batch_size, 1], fill_value=tokenizer.start_id).to(device)
-        # 3. 自回归生成
+        decoder_inputs = torch.full(size=[batch_size, 1], fill_value=tokenizer.start_id).to(device)
+        # 2. 自回归生成
         generated_ids = [] # 只保存生成真实译文的对应id，有N个元素的列表，每个元素都是id的列表，表示一句译文
         is_finished = torch.full(size=[batch_size], fill_value=False).to(device) # 记录每条数据是否已生成天结束
         for i in range(SEQ_LEN):
-            # 3.1 解码器前向传播，得到输出 (N, L=1, vocab_size)
-            decoder_output, decoder_hidden = model.decoder(decoder_input, decoder_hidden, encoder_outputs)
-            # 3.2 贪心解码，得到形状(N, 1)
-            next_token_ids = decoder_output.argmax(dim=-1)
-            # 3.3 更新解码器输入，进行下一个时间步迭代
-            decoder_input = next_token_ids
+            # 2.1 解码器前向传播，得到输出 (N, T, vocab_size)
+            tgt_mask = model.transformer.generate_square_subsequent_mask(decoder_inputs.shape[1])
+            decoder_outputs = model.decode(tgt=decoder_inputs, memory=memory, tgt_mask=tgt_mask, memory_key_padding_mask=src_key_padding_mask)
+
+            # 2.2 贪心解码，得到形状(N, 1)
+            next_token_ids = decoder_outputs[:, -1, :].argmax(dim=-1).unsqueeze(-1)
+
+            # 2.3 更新解码器输入，进行下一个位置迭代， 得到形状(N, T+1)
+            decoder_inputs = torch.cat([decoder_inputs, next_token_ids], dim=-1)
 
             # 3.4 保存到列表中 (目前的元素都是tensor)
             generated_ids.append(next_token_ids)
@@ -37,7 +39,7 @@ def predict_batch(model, inputs, tokenizer, device):
                 break
 
         # 自回归生成结束，处理生成结果，转换为列表的列表
-        # 1. 合并 L 个时间步，得到(N, L)的Tensor
+        # 1. 合并 L 个位置，得到(N, L)的Tensor
         generated_tensor = torch.cat(generated_ids, dim=1)
         # 2. 转为二维列表
         generated_list = generated_tensor.tolist()
@@ -74,7 +76,7 @@ def run_predict():
     en_tokenizer = EnglishTokenizer.create_tokenizer(MODEL_DIR/EN_VOCAB_FILE)
 
     # 1.3.= 创建模型
-    model = TranslationSeq2SeqModel(src_vocab_size=zh_tokenizer.vocab_size, tgt_vocab_size=en_tokenizer.vocab_size, src_padding_idx=zh_tokenizer.pad_id, tgt_padding_idx=en_tokenizer.pad_id).to(device)
+    model =  TranslationModel(src_vocab_size=zh_tokenizer.vocab_size, tgt_vocab_size=en_tokenizer.vocab_size, src_padding_idx=zh_tokenizer.pad_id, tgt_padding_idx=en_tokenizer.pad_id).to(device)
     model.load_state_dict(torch.load(MODEL_DIR/BEST_MODEL)) # 加载训练好的模型参数
 
     print("模型加载成功！")

@@ -1,7 +1,7 @@
 import torch
 from config import *
 from dataset import get_dataloader
-from model import TranslationSeq2SeqModel
+from model import TranslationModel
 from predict import predict_batch
 from tqdm import tqdm
 from tokenizer import ChineseTokenizer, EnglishTokenizer
@@ -37,7 +37,7 @@ def run_evaluate():
     en_tokenizer = EnglishTokenizer.create_tokenizer(MODEL_DIR/EN_VOCAB_FILE)
 
     # 1.3 创建模型
-    model = TranslationSeq2SeqModel(zh_tokenizer.vocab_size, en_tokenizer.vocab_size, zh_tokenizer.pad_id, en_tokenizer.pad_id).to(device)
+    model = TranslationModel(zh_tokenizer.vocab_size, en_tokenizer.vocab_size, zh_tokenizer.pad_id, en_tokenizer.pad_id).to(device)
     model.load_state_dict(torch.load(MODEL_DIR/BEST_MODEL))
 
     print("模型加载成功！")
