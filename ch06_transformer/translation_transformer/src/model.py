@@ -1,14 +1,33 @@
+import math
+
 import torch
 import torch.nn as nn
 from config import *
 
 # 自定义位置编码层
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, max_len=5000):
+    def __init__(self, d_model, max_len=5000): # max_len 表示最大序列长度，d_model表示词向量维度
         super(PositionalEncoding, self).__init__()
+        # 预定义位置编码矩阵
+        pe = torch.zeros(max_len, d_model)
+        # 逐行（对每个位置pos）进行向量预计算
+        for pos in range(max_len):
+            # 遍历所有可能的2i 值
+            for _2i in range(0, d_model, 2):
+                # 代入公式，计算对应的两个数值
+                pe[pos, _2i] = math.sin( pos / (10000 ** (_2i / d_model)))
+                pe[pos, _2i + 1] = math.cos( pos / (10000 ** (_2i / d_model)))
 
+        self.register_buffer('pe', pe) # register_buffer的作用是将pe注册为模型的一个缓冲区（buffer），这样在保存和加载模型时，pe会被包含在内，但不会被视为模型的可训练参数。缓冲区通常用于存储不需要梯度更新的张量，例如位置编码矩阵。调用.to(device)时会一起迁移到设备上。
+
+    # 前向传播，传入词向量x的形状(N, L, d_model)
     def forward(self, x):
-        pass
+        # 记录序列长度 L
+        seq_len = x.shape[1]
+        # 从预计算pe矩阵中，截取前L行
+        part_pe = self.pe[: seq_len]
+        # 词向量叠加位置向量，返回
+        return x + part_pe
 
 # 总模型
 class TranslationModel(nn.Module):
