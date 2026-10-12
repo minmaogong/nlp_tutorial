@@ -7,3 +7,6 @@
 /ch05_attention/translation_attention/src/__pycache__
 /ch06_transformer/translation_transformer/src/__pycache__
 /ch04_seq2seq/translation_seq2seq/data/raw/.accelerate
+/ch07_pretrained_models/data/processed/arrow
+/ch07_pretrained_models/data/processed/csv
+/ch07_pretrained_models/data/processed/json
