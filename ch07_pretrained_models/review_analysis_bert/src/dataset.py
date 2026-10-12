@@ -1,49 +1,33 @@
 import torch
-import pandas as pd
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 from config import *
-
-# 自定义数据集类
-class ReviewAnalysisDataset(Dataset):
-    # 初始化
-    def __init__(self, file_path):
-        self.data = pd.read_json(file_path, lines=True).to_dict(orient='records')
-
-    # 获取长度
-    def __len__(self):
-        return len(self.data)
-
-    # 获取元素
-    def __getitem__(self, idx):
-        input = torch.tensor(self.data[idx]['review'])
-        target = torch.tensor(self.data[idx]['label'], dtype=torch.float)
-        return input, target
+from datasets import load_from_disk # 加载箭头arrow格式的文件
 
 # 获取DataLoader
 def get_dataloader(train=True):
     # 根据参数判断获取哪个数据集
-    file_path = PROCESSED_DATA_DIR / (TRAIN_DATA_FILE if train else TEST_DATA_FILE)
-    # 创建数据集
-    dataset = ReviewAnalysisDataset(file_path)
+    path = PROCESSED_DATA_DIR / ('train' if train else 'test')
+    # 从文件加载数据集
+    dataset = load_from_disk(path)
+
+    # 转换为Tensor
+    dataset.set_format(type='torch') # 设置数据集输出格式为PyTorch张量，确保DataLoader能正确堆叠出 [batch_size, seq_len] 形状的批次
+
     # 创建加载器
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     return dataloader
 
 
 if __name__ == '__main__':
-    # 测试数据集
-    train_dataset = ReviewAnalysisDataset(PROCESSED_DATA_DIR/TRAIN_DATA_FILE)
-    print(len(train_dataset))
-    print(train_dataset[0])
-
     # 测试数据加载器
     train_loader = get_dataloader(train=True)
     test_loader = get_dataloader(train=False)
     # 取一批数据
-    for input, target in train_loader:
-        print(input.shape, target.shape)
+    for batch in train_loader:
+        for key, value in batch.items():
+            print(key, '->', value)
         break
     test_iter = iter(test_loader)
-    input, target = next(test_iter)
-    print(input.shape, target.shape)
+    batch = next(test_iter)
+    print(batch['input_ids'].shape, batch['attention_mask'].shape, batch['labels'].shape)
 
