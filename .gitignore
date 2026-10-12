@@ -10,3 +10,5 @@
 /ch07_pretrained_models/data/processed/arrow
 /ch07_pretrained_models/data/processed/csv
 /ch07_pretrained_models/data/processed/json
+/ch07_pretrained_models/review_analysis_bert/src/__pycache__
+/ch07_pretrained_models/review_analysis_bert/data/processed
