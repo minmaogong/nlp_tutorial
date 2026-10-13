@@ -8,17 +8,17 @@ from torch.utils.tensorboard import SummaryWriter
 from config import *
 from dataset import get_dataloader
 from model import ReviewAnalysisModel
-from tokenizer import MyJiebaTokenizer
 
 # 训练一个轮次
 def train_one_epoch(model, dataloader, loss_fn, optimizer, device):
     model.train()
     total_loss = 0
     # 按批次进行迭代
-    for inputs, targets in tqdm(dataloader, desc="Training"):
-        inputs, targets = inputs.to(device), targets.to(device)
+    for batch in tqdm(dataloader, desc="Training"):
+        inputs = { k:v.to(device) for k, v in batch.items() } # 此时inputs是一个字典，包含input_ids, attention_mask, token_type_ids, labels等信息
+        targets = inputs.pop("labels").float() # 将labels从inputs中取出，作为目标值targets，inputs中不再包含labels
         # 前向传播
-        outputs = model(inputs)
+        outputs = model(**inputs) # 将inputs解包成关键字参数传入模型的forward方法，BERT模型前向传播就需要input_ids, attention_mask, token_type_ids等信息
         # 计算损失
         loss = loss_fn(outputs, targets)
         # 反向传播
@@ -36,21 +36,15 @@ def train_one_epoch(model, dataloader, loss_fn, optimizer, device):
 # 训练流程
 def train():
     # 1. 定义设备
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available()
+                          else "mps" if torch.backends.mps.is_available()
+                          else "cpu")
 
     # 2. 获取数据加载器
     dataloader = get_dataloader(train=True)
 
-    # 3. 加载词表
-    # with open(MODEL_DIR/VOCAB_FILE, 'r', encoding='utf-8') as f:
-    #     id2word = [ line.strip() for line in f.readlines() ]
-    # 3. 创建分词器
-    tokenizer = MyJiebaTokenizer.create_tokenizer(MODEL_DIR/VOCAB_FILE)
-
-    # word2id = { word:id for id, word in enumerate(id2word) }
-
     # 4. 创建模型
-    model = ReviewAnalysisModel(vocab_size=tokenizer.vocab_size, padding_idx=tokenizer.pad_id).to(device)
+    model = ReviewAnalysisModel().to(device)
 
     # 5. 损失函数
     loss_fn = nn.BCEWithLogitsLoss()

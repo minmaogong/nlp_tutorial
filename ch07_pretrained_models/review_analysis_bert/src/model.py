@@ -12,9 +12,9 @@ class ReviewAnalysisModel(nn.Module):
         self.linear = nn.Linear(in_features=self.bert.config.hidden_size, out_features=1)
 
     # 前向传播
-    def forward(self, **kwargs):
+    def forward(self, **kwargs): # 这里的**kwargs表示接受多个参数，并打包成字典
         # BERT，得到CLS位置对应向量 (N, hidden_size)
-        output = self.bert(**kwargs)
+        output = self.bert(**kwargs) # 这里的**kwargs表示解包输入字典
         cls_hidden_state = output.pooler_output
 
         # Linear整合特征输出，形状(N, 1)

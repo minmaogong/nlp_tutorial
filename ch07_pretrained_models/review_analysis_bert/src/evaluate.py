@@ -4,8 +4,6 @@ from dataset import get_dataloader
 from model import ReviewAnalysisModel
 from predict import predict_batch
 from tqdm import tqdm
-from tokenizer import MyJiebaTokenizer
-
 
 # 评估逻辑，返回准确率
 def evaluate(model, test_loader, device):
@@ -13,9 +11,9 @@ def evaluate(model, test_loader, device):
     acc_count = 0
     total_count = 0
     with torch.no_grad():
-        for inputs, targets in tqdm(test_loader, desc="Evaluating"):
-            inputs = inputs.to(device)
-            targets = targets.tolist()
+        for batch in tqdm(test_loader, desc="Evaluating"):
+            targets = batch.pop("labels").tolist() # 将labels从batch中取出，作为目标值targets，batch中不再包含labels
+            inputs = { k:v.to(device) for k, v in batch.items() } # 此时inputs是一个字典，包含input_ids, attention_mask, token_type_ids等信息，不包含labels
             # 前向传播（批量预测，得到概率列表）
             probas = predict_batch(model, inputs)
             # 对比预测结果和标签，统计准确数量
@@ -32,18 +30,12 @@ def evaluate(model, test_loader, device):
 def run_evaluate():
     # 1. 准备工作，创建模型model
     # 1.1 定义设备
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # 1.2 加载词表
-    # with open(MODEL_DIR/VOCAB_FILE, 'r', encoding='utf-8') as f:
-    #     id2word = [ line.strip() for line in f.readlines() ]
-    #
-    # word2id = {word:id for id, word in enumerate(id2word)}
-
-    # 1.2 创建分词器
-    tokenizer = MyJiebaTokenizer.create_tokenizer(MODEL_DIR/VOCAB_FILE)
+    device = torch.device("cuda" if torch.cuda.is_available()
+                          else "mps" if torch.backends.mps.is_available()
+                          else "cpu")
 
     # 1.3 创建模型
-    model = ReviewAnalysisModel(tokenizer.vocab_size, tokenizer.pad_id).to(device)
+    model = ReviewAnalysisModel().to(device)
     model.load_state_dict(torch.load(MODEL_DIR/BEST_MODEL))
 
     print("模型加载成功！")
