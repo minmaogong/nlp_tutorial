@@ -13,3 +13,6 @@
 /ch07_pretrained_models/review_analysis_bert/src/__pycache__
 /ch07_pretrained_models/review_analysis_bert/data/processed
 /ch07_pretrained_models/review_analysis_bert/models
+/ch07_pretrained_models/review_analysis_bert4sc/data/processed
+/ch07_pretrained_models/review_analysis_bert4sc/models
+/ch07_pretrained_models/review_analysis_bert4sc/src/__pycache__
